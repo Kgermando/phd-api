@@ -1,0 +1,56 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: phd-api
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      PORT: "8000"
+      DB_HOST: postgres
+      DB_PORT: "${DB_PORT:-5432}"
+      DB_USER: "${DB_USER:-phd}"
+      DB_PASSWORD: "${DB_PASSWORD}"
+      DB_NAME: "${DB_NAME:-phd}"
+      JWT_SECRET: "${JWT_SECRET}"
+      SMTP_HOST: "${SMTP_HOST}"
+      SMTP_PORT: "${SMTP_PORT}"
+      SMTP_USER: "${SMTP_USER}"
+      SMTP_PASSWORD: "${SMTP_PASSWORD}"
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - phd-net
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: phd-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: "${DB_USER:-phd}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD}"
+      POSTGRES_DB: "${DB_NAME:-phd}"
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-phd} -d ${DB_NAME:-phd}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - phd-net
+
+volumes:
+  postgres_data:
+  uploads_data:
+
+networks:
+  phd-net:
+    driver: bridge
