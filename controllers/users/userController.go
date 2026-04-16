@@ -37,8 +37,6 @@ func GetPaginatedUsers(c *fiber.Ctx) error {
 
 	err = db.
 		Where("fullname ILIKE ? OR role ILIKE ?", "%"+search+"%", "%"+search+"%").
-		Preload("Direction").
-		Preload("Bureau").
 		Offset(offset).
 		Limit(limit).
 		Order("users.updated_at DESC").
@@ -76,7 +74,7 @@ func GetPaginatedUsers(c *fiber.Ctx) error {
 func GetAllUSers(c *fiber.Ctx) error {
 	db := database.DB
 	var users []models.User
-	db.Preload("Direction").Preload("Bureau").Find(&users)
+	db.Find(&users)
 	return c.JSON(fiber.Map{
 		"status":  "success",
 		"message": "All users",
@@ -89,7 +87,7 @@ func GetUser(c *fiber.Ctx) error {
 	uuid := c.Params("uuid")
 	db := database.DB
 	var user models.User
-	db.Where("uuid = ?", uuid).Preload("Direction").Preload("Bureau").First(&user)
+	db.Where("uuid = ?", uuid).First(&user)
 	if user.Fullname == "" {
 		return c.Status(404).JSON(
 			fiber.Map{
@@ -134,12 +132,12 @@ func CreateUser(c *fiber.Ctx) error {
 	}
 
 	user := &models.User{
-		Fullname:      p.Fullname,
-		Email:         p.Email,
-		Telephone:     p.Telephone, 
-		Role:          p.Role,
-		Permission:    p.Permission,
-		Status:        p.Status,
+		Fullname:   p.Fullname,
+		Email:      p.Email,
+		Telephone:  p.Telephone,
+		Role:       p.Role,
+		Permission: p.Permission,
+		Status:     p.Status,
 	}
 
 	user.SetPassword(p.Password)
@@ -163,14 +161,14 @@ func UpdateUser(c *fiber.Ctx) error {
 	db := database.DB
 
 	type UpdateDataInput struct {
-		Fullname        string `gorm:"not null" json:"fullname"`
-		Email           string `gorm:"unique; not null" json:"email"`
-		Telephone       string `gorm:"unique; not null" json:"telephone"` 
-		Password        string `json:"password" validate:"required"`
-		PasswordConfirm string `json:"password_confirm" gorm:"-"`
+		Fullname        string `json:"fullname"`
+		Email           string `json:"email"`
+		Telephone       string `json:"telephone"`
+		Password        string `json:"password"`
+		PasswordConfirm string `json:"password_confirm"`
 		Role            string `json:"role"`
 		Permission      string `json:"permission"`
-		Status          bool   `json:"status"` 
+		Status          bool   `json:"status"`
 	}
 
 	var updateData UpdateDataInput
@@ -190,10 +188,21 @@ func UpdateUser(c *fiber.Ctx) error {
 	db.Where("uuid = ?", uuid).First(&user)
 	user.Fullname = updateData.Fullname
 	user.Email = updateData.Email
-	user.Telephone = updateData.Telephone 
+	user.Telephone = updateData.Telephone
 	user.Role = updateData.Role
 	user.Permission = updateData.Permission
-	user.Status = updateData.Status 
+	user.Status = updateData.Status
+
+	// Mettre à jour le mot de passe uniquement s'il est fourni
+	if updateData.Password != "" {
+		if updateData.Password != updateData.PasswordConfirm {
+			return c.Status(400).JSON(fiber.Map{
+				"status":  "error",
+				"message": "passwords do not match",
+			})
+		}
+		user.SetPassword(updateData.Password)
+	}
 
 	db.Save(&user)
 

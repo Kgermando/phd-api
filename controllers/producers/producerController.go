@@ -30,6 +30,9 @@ func CreateProducer(c *fiber.Ctx) error {
 	// Générer UUID
 	producer.UUID = utils.GenerateUUID()
 
+	// Assigner user_uuid depuis le token JWT
+	producer.UserUUID = c.Locals("user_uuid").(string)
+
 	if err := db.Create(&producer).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
@@ -61,7 +64,8 @@ func GetPaginatedProducers(c *fiber.Ctx) error {
 
 	// Parse search query
 	search := c.Query("search", "")
-	zone := c.Query("zone", "")
+	village := c.Query("village", "")
+	userUUID := c.Query("user_uuid", "")
 
 	var producers []models.Producer
 	var totalRecords int64
@@ -72,8 +76,11 @@ func GetPaginatedProducers(c *fiber.Ctx) error {
 	if search != "" {
 		query = query.Where("nom ILIKE ? OR telephone ILIKE ? OR village ILIKE ?", "%"+search+"%", "%"+search+"%", "%"+search+"%")
 	}
-	if zone != "" {
-		query = query.Where("zone = ?", zone)
+	if village != "" {
+		query = query.Where("village = ?", village)
+	}
+	if userUUID != "" {
+		query = query.Where("user_uuid = ?", userUUID)
 	}
 
 	// Count total records
@@ -83,11 +90,14 @@ func GetPaginatedProducers(c *fiber.Ctx) error {
 	if search != "" {
 		query = query.Where("nom ILIKE ? OR telephone ILIKE ? OR village ILIKE ?", "%"+search+"%", "%"+search+"%", "%"+search+"%")
 	}
-	if zone != "" {
-		query = query.Where("zone = ?", zone)
+	if village != "" {
+		query = query.Where("village = ?", village)
+	}
+	if userUUID != "" {
+		query = query.Where("user_uuid = ?", userUUID)
 	}
 
-	err = query.Preload("Champs").
+	err = query.Preload("User").Preload("Champs").
 		Offset(offset).
 		Limit(limit).
 		Order("producers.updated_at DESC").
@@ -122,7 +132,7 @@ func GetProducerByID(c *fiber.Ctx) error {
 	}
 
 	var producer models.Producer
-	if err := db.Preload("Champs").First(&producer, "uuid = ?", producerUUID).Error; err != nil {
+	if err := db.Preload("User").Preload("Champs").Preload("Scores").First(&producer, "uuid = ?", producerUUID).Error; err != nil {
 		return c.Status(404).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Producer not found",
@@ -155,15 +165,61 @@ func UpdateProducer(c *fiber.Ctx) error {
 		})
 	}
 
-	var updateData models.Producer
-	if err := c.BodyParser(&updateData); err != nil {
+	var input models.Producer
+	if err := c.BodyParser(&input); err != nil {
 		return c.Status(400).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Invalid request body",
 		})
 	}
 
-	if err := db.Model(&producer).Updates(updateData).Error; err != nil {
+	// Mise à jour explicite de tous les champs (nécessaire pour les booléens)
+	producer.Nom = input.Nom
+	producer.Sexe = input.Sexe
+	producer.DateNaissance = input.DateNaissance
+	producer.Telephone = input.Telephone
+	producer.Village = input.Village
+	producer.Groupement = input.Groupement
+	// Section 2
+	producer.StatutFoncier = input.StatutFoncier
+	producer.AnneesExperience = input.AnneesExperience
+	producer.MembreCooperative = input.MembreCooperative
+	producer.NomCooperative = input.NomCooperative
+	// Section 4
+	producer.RotationCultures = input.RotationCultures
+	producer.UtilisationCompost = input.UtilisationCompost
+	producer.SignesDegradation = input.SignesDegradation
+	producer.SourceEau = input.SourceEau
+	producer.EconomieEau = input.EconomieEau
+	producer.ParcelleInondable = input.ParcelleInondable
+	producer.UtilisationPesticides = input.UtilisationPesticides
+	producer.FormationPesticides = input.FormationPesticides
+	producer.PresenceArbres = input.PresenceArbres
+	producer.ActiviteDeforestation = input.ActiviteDeforestation
+	producer.BaiseFaune = input.BaiseFaune
+	// Section 5
+	producer.PerteSec = input.PerteSec
+	producer.PerteInondation = input.PerteInondation
+	producer.PerteVents = input.PerteVents
+	producer.StrategiesAdaptation = input.StrategiesAdaptation
+	// Section 6
+	producer.VarietesCultivees = input.VarietesCultivees
+	producer.RendementMoyen = input.RendementMoyen
+	producer.CampagnesParAn = input.CampagnesParAn
+	// Section 7
+	producer.ManqueEau = input.ManqueEau
+	producer.IntrantsCouteux = input.IntrantsCouteux
+	producer.AccesCredit = input.AccesCredit
+	producer.DegradationSols = input.DegradationSols
+	producer.ChangementsClimatiques = input.ChangementsClimatiques
+	producer.LieuVente = input.LieuVente
+	// Section 8
+	producer.BesoinsPrioritaires = input.BesoinsPrioritaires
+	// Section 9
+	producer.Latitude = input.Latitude
+	producer.Longitude = input.Longitude
+
+	if err := db.Save(&producer).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Failed to update producer",
@@ -261,20 +317,20 @@ func AddChampToProducer(c *fiber.Ctx) error {
 	})
 }
 
-// GetProducersByZone récupère les producteurs par zone
+// GetProducersByZone récupère les producteurs par village (zone géographique)
 func GetProducersByZone(c *fiber.Ctx) error {
 	db := database.DB
 
-	zone := c.Query("zone", "")
-	if zone == "" {
+	village := c.Query("village", "")
+	if village == "" {
 		return c.Status(400).JSON(fiber.Map{
 			"status":  "error",
-			"message": "Zone parameter is required",
+			"message": "Village parameter is required",
 		})
 	}
 
 	var producers []models.Producer
-	if err := db.Where("zone = ?", zone).Preload("Champs").Find(&producers).Error; err != nil {
+	if err := db.Where("village = ?", village).Preload("User").Preload("Champs").Find(&producers).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Failed to fetch producers",
@@ -283,7 +339,7 @@ func GetProducersByZone(c *fiber.Ctx) error {
 
 	return c.Status(200).JSON(fiber.Map{
 		"status":    "success",
-		"zone":      zone,
+		"village":   village,
 		"count":     len(producers),
 		"producers": producers,
 	})

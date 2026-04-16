@@ -24,4 +24,14 @@ func SetupProducerRoutes(api fiber.Router) {
 	prod.Post("/:uuid/champs/add", producers.AddChampToProducer)
 	prod.Get("/:uuid/champs", producers.GetProducerChamps)
 	prod.Delete("/champs/:champUUID", producers.DeleteChamp)
+
+	// ============================================================
+	// SCORES ROUTES (Grille de scoring /100 — seuil : 60)
+	// ============================================================
+	prod.Post("/:uuid/scores/create", producers.CreateScore)
+	prod.Get("/:uuid/scores", producers.GetScoresByProducer)
+	prod.Get("/scores/:scoreUUID", producers.GetScoreByID)
+	prod.Put("/scores/:scoreUUID/update", producers.UpdateScore)
+	prod.Delete("/scores/:scoreUUID/delete", producers.DeleteScore)
+	prod.Get("/scores/recommended/list", producers.GetRecommendedProducers)
 }

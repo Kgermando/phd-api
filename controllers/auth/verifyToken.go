@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/kgermando/dentic-support-api/database"
-	"github.com/kgermando/dentic-support-api/models"
+	"github.com/kgermando/phd-api/database"
+	"github.com/kgermando/phd-api/models"
 	"gorm.io/gorm"
 )
 
@@ -49,7 +49,7 @@ func VerifyResetToken(c *fiber.Ctx) error {
 	}
 
 	// Recherche de l'employé pour vérifier qu'il existe toujours
-	user := &models.Agent{}
+	user := &models.User{}
 	result = database.DB.Where("email = ?", passwordReset.Email).First(user)
 	if result.Error != nil {
 		return c.Status(400).JSON(fiber.Map{

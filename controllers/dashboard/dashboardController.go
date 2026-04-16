@@ -333,9 +333,10 @@ func GetDashboardStats(c *fiber.Ctx) error {
 		if s.Score >= 60 {
 			eligible++
 		}
-		if s.Producer.Sexe == "femme" {
+		switch s.Producer.Sexe {
+		case "femme":
 			femmes++
-		} else if s.Producer.Sexe == "homme" {
+		case "homme":
 			hommes++
 		}
 		totalScore += s.Score
@@ -354,7 +355,7 @@ func GetDashboardStats(c *fiber.Ctx) error {
 	})
 
 	for _, s := range scored {
-		zone := s.Producer.Zone
+		zone := s.Producer.Village
 		if zone == "" {
 			zone = "Inconnue"
 		}
@@ -393,7 +394,7 @@ func GetDashboardStats(c *fiber.Ctx) error {
 
 	// Recent producers (last 6)
 	var recent []models.Producer
-	db.Preload("Champs").Order("date_recensement DESC").Limit(6).Find(&recent)
+	db.Preload("Champs").Order("updated_at DESC").Limit(6).Find(&recent)
 
 	// Statut foncier pie
 	sfMap := make(map[string]int)
@@ -500,7 +501,7 @@ func GetDashboardStats(c *fiber.Ctx) error {
 	// Line chart: Monthly evolution
 	monthMap := make(map[string]int)
 	for _, s := range scored {
-		month := s.Producer.DateRecensement.Format("2006-01")
+		month := s.Producer.CreatedAt.Format("2006-01")
 		monthMap[month]++
 	}
 
@@ -579,16 +580,16 @@ func GetUserPerformance(c *fiber.Ctx) error {
 
 	for _, p := range producers {
 		scoreResult := ScoreProducer(p)
-		stats := userMap[p.AgentRecenseurUUID]
+		stats := userMap[p.UserUUID]
 		stats.TotalProducers++
 		if scoreResult.Total >= 60 {
 			stats.EligibleProducers++
 		}
 		stats.TotalScore += scoreResult.Total
-		if stats.LastSurveyDate == nil || p.DateRecensement.After(*stats.LastSurveyDate) {
-			stats.LastSurveyDate = &p.DateRecensement
+		if stats.LastSurveyDate == nil || p.CreatedAt.After(*stats.LastSurveyDate) {
+			stats.LastSurveyDate = &p.CreatedAt
 		}
-		userMap[p.AgentRecenseurUUID] = stats
+		userMap[p.UserUUID] = stats
 	}
 
 	// Fetch user details
@@ -656,7 +657,7 @@ func GetZonePerformance(c *fiber.Ctx) error {
 
 	for _, p := range producers {
 		scoreResult := ScoreProducer(p)
-		zone := p.Zone
+		zone := p.Village
 		if zone == "" {
 			zone = "Inconnue"
 		}
@@ -672,7 +673,7 @@ func GetZonePerformance(c *fiber.Ctx) error {
 		if stats.AgentCounts == nil {
 			stats.AgentCounts = make(map[string]int)
 		}
-		stats.AgentCounts[p.AgentRecenseurUUID]++
+		stats.AgentCounts[p.UserUUID]++
 
 		zoneMap[zone] = stats
 	}
@@ -768,7 +769,7 @@ func GetProductivityMetrics(c *fiber.Ctx) error {
 	zoneMetricsMap := make(map[string]ZoneMetrics)
 
 	for _, p := range producers {
-		zone := p.Zone
+		zone := p.Village
 		if zone == "" {
 			zone = "Inconnue"
 		}
@@ -857,7 +858,7 @@ func GetEnvironmentalImpact(c *fiber.Ctx) error {
 	zoneEnvMap := make(map[string]EnvStats)
 
 	for _, p := range producers {
-		zone := p.Zone
+		zone := p.Village
 		if zone == "" {
 			zone = "Inconnue"
 		}
@@ -945,7 +946,7 @@ func GetVulnerabilityIndex(c *fiber.Ctx) error {
 	zoneVulnMap := make(map[string]VulnStats)
 
 	for _, p := range producers {
-		zone := p.Zone
+		zone := p.Village
 		if zone == "" {
 			zone = "Inconnue"
 		}
@@ -1017,7 +1018,7 @@ func GetSurveyTimeSeries(c *fiber.Ctx) error {
 	})
 
 	for _, p := range producers {
-		dateStr := p.DateRecensement.Format("2006-01-02")
+		dateStr := p.CreatedAt.Format("2006-01-02")
 		scoreResult := ScoreProducer(p)
 
 		stats := dateMap[dateStr]
@@ -1168,7 +1169,7 @@ func ExportDashboardPDF(c *fiber.Ctx) error {
 	})
 
 	for _, s := range scored {
-		zone := s.Producer.Zone
+		zone := s.Producer.Village
 		if zone == "" {
 			zone = "Inconnue"
 		}
@@ -1238,16 +1239,16 @@ func ExportUserPerformancePDF(c *fiber.Ctx) error {
 
 	for _, p := range producers {
 		scoreResult := ScoreProducer(p)
-		stats := userMap[p.AgentRecenseurUUID]
+		stats := userMap[p.UserUUID]
 		stats.TotalProducers++
 		if scoreResult.Total >= 60 {
 			stats.EligibleProducers++
 		}
 		stats.TotalScore += scoreResult.Total
-		if stats.LastSurveyDate == nil || p.DateRecensement.After(*stats.LastSurveyDate) {
-			stats.LastSurveyDate = &p.DateRecensement
+		if stats.LastSurveyDate == nil || p.CreatedAt.After(*stats.LastSurveyDate) {
+			stats.LastSurveyDate = &p.CreatedAt
 		}
-		userMap[p.AgentRecenseurUUID] = stats
+		userMap[p.UserUUID] = stats
 	}
 
 	var users []models.User
@@ -1395,7 +1396,7 @@ func ExportDashboardExcel(c *fiber.Ctx) error {
 	})
 
 	for _, s := range scored {
-		zone := s.Producer.Zone
+		zone := s.Producer.Village
 		if zone == "" {
 			zone = "Inconnue"
 		}
@@ -1446,7 +1447,7 @@ func ExportDashboardExcel(c *fiber.Ctx) error {
 	for _, sp := range scored {
 		scoreDetail := ScoreProducer(sp.Producer)
 		f.SetCellValue(sheet3, fmt.Sprintf("A%d", row), sp.Producer.Nom)
-		f.SetCellValue(sheet3, fmt.Sprintf("B%d", row), sp.Producer.Zone)
+		f.SetCellValue(sheet3, fmt.Sprintf("B%d", row), sp.Producer.Village)
 		f.SetCellValue(sheet3, fmt.Sprintf("C%d", row), sp.Producer.Village)
 		f.SetCellValue(sheet3, fmt.Sprintf("D%d", row), sp.Producer.Sexe)
 		f.SetCellValue(sheet3, fmt.Sprintf("E%d", row), sp.Score)
@@ -1521,7 +1522,7 @@ func ExportProducerScoresExcel(c *fiber.Ctx) error {
 	for _, sp := range scored {
 		scoreDetail := ScoreProducer(sp.Producer)
 		f.SetCellValue(sheet, fmt.Sprintf("A%d", row), sp.Producer.Nom)
-		f.SetCellValue(sheet, fmt.Sprintf("B%d", row), sp.Producer.Zone)
+		f.SetCellValue(sheet, fmt.Sprintf("B%d", row), sp.Producer.Village)
 		f.SetCellValue(sheet, fmt.Sprintf("C%d", row), math.Round(sp.Score*100)/100)
 		f.SetCellValue(sheet, fmt.Sprintf("D%d", row), math.Round(scoreDetail.Environmental*100)/100)
 		f.SetCellValue(sheet, fmt.Sprintf("E%d", row), math.Round(scoreDetail.Experience*100)/100)
@@ -1568,16 +1569,16 @@ func ExportUserPerformanceExcel(c *fiber.Ctx) error {
 
 	for _, p := range producers {
 		scoreResult := ScoreProducer(p)
-		stats := userMap[p.AgentRecenseurUUID]
+		stats := userMap[p.UserUUID]
 		stats.TotalProducers++
 		if scoreResult.Total >= 60 {
 			stats.EligibleProducers++
 		}
 		stats.TotalScore += scoreResult.Total
-		if stats.LastSurveyDate == nil || p.DateRecensement.After(*stats.LastSurveyDate) {
-			stats.LastSurveyDate = &p.DateRecensement
+		if stats.LastSurveyDate == nil || p.CreatedAt.After(*stats.LastSurveyDate) {
+			stats.LastSurveyDate = &p.CreatedAt
 		}
-		userMap[p.AgentRecenseurUUID] = stats
+		userMap[p.UserUUID] = stats
 	}
 
 	var users []models.User

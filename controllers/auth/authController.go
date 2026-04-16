@@ -29,13 +29,13 @@ func Register(c *fiber.Ctx) error {
 	}
 
 	u := &models.User{
-		UUID:          utils.GenerateUUID(),
-		Fullname:      nu.Fullname,
-		Email:         nu.Email,
-		Telephone:     nu.Telephone,
-		Role:          nu.Role,
-		Permission:    nu.Permission,
-		Status:        nu.Status,
+		UUID:       utils.GenerateUUID(),
+		Fullname:   nu.Fullname,
+		Email:      nu.Email,
+		Telephone:  nu.Telephone,
+		Role:       nu.Role,
+		Permission: nu.Permission,
+		Status:     nu.Status,
 	}
 
 	u.SetPassword(nu.Password)
@@ -120,20 +120,17 @@ func AuthAgent(c *fiber.Ctx) error {
 
 	u := models.User{}
 
-	database.DB.Where("uuid = ?", agentUUID).
-		Preload("Direction").
-		Preload("Bureau").
-		First(&u)
+	database.DB.Where("uuid = ?", agentUUID).First(&u)
 	r := &models.UserResponse{
-		UUID:          u.UUID,
-		Fullname:      u.Fullname,
-		Email:         u.Email,
-		Telephone:     u.Telephone,
-		Role:          u.Role,
-		Permission:    u.Permission,
-		Status:        u.Status,
-		CreatedAt:     u.CreatedAt,
-		UpdatedAt:     u.UpdatedAt,
+		UUID:       u.UUID,
+		Fullname:   u.Fullname,
+		Email:      u.Email,
+		Telephone:  u.Telephone,
+		Role:       u.Role,
+		Permission: u.Permission,
+		Status:     u.Status,
+		CreatedAt:  u.CreatedAt,
+		UpdatedAt:  u.UpdatedAt,
 	}
 	return c.JSON(r)
 }

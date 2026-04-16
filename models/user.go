@@ -13,28 +13,30 @@ type User struct {
 	UpdatedAt time.Time
 	DeletedAt gorm.DeletedAt `gorm:"index"`
 
-	Fullname        string     `gorm:"not null" json:"fullname"`
-	Email           string     `gorm:"unique; not null" json:"email"`
-	Telephone       string     `gorm:"unique" json:"telephone"`
+	Fullname  string `gorm:"not null" json:"fullname"`
+	Email     string `gorm:"unique; not null" json:"email"`
+	Telephone string `gorm:"unique" json:"telephone"`
 
-	Password        string     `json:"password"`
-	PasswordConfirm string     `json:"password_confirm" gorm:"-"`
-	Role            string     `json:"role"` // 'Directeur', 'Secretaire', 'Chef du bureau', 'Agent', 'SuperAdmin'
-	Permission      string     `json:"permission"`
-	Status          bool       `gorm:"default:false" json:"status"`
+	Password        string `json:"password"`
+	PasswordConfirm string `json:"password_confirm" gorm:"-"`
+	Role            string `json:"role"` // 'Directeur' | 'Superviseur' | 'Producteur' | 'Admin'
+	Permission      string `json:"permission"`
+	Status          bool   `gorm:"default:false" json:"status"` 
+
+	Producers []Producer `gorm:"foreignKey:UserUUID" json:"producers"`
 }
 
 type UserResponse struct {
-	UUID            string     `json:"uuid"`
-	Fullname        string     `json:"fullname"`
-	Email           string     `json:"email"`
-	Telephone       string     `json:"telephone"`
- 
-	Password        string     `json:"password"`
-	PasswordConfirm string     `json:"password_confirm"`
-	Role            string     `json:"role"` // 'Directeur', 'Secretaire', 'Chef du bureau', 'Agent', 'SuperAdmin'
-	Permission      string     `json:"permission"`
-	Status          bool       `json:"status"`
+	UUID      string `json:"uuid"`
+	Fullname  string `json:"fullname"`
+	Email     string `json:"email"`
+	Telephone string `json:"telephone"`
+
+	Password        string `json:"password"`
+	PasswordConfirm string `json:"password_confirm"`
+	Role            string `json:"role"` // 'Directeur' | 'Superviseur' | 'Producteur' | 'Admin'
+	Permission      string `json:"permission"`
+	Status          bool   `json:"status"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`

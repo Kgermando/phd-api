@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/kgermando/dentic-support-api/database"
-	"github.com/kgermando/dentic-support-api/models"
-	"github.com/kgermando/dentic-support-api/utils"
+	"github.com/kgermando/phd-api/database"
+	"github.com/kgermando/phd-api/models"
+	"github.com/kgermando/phd-api/utils"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -35,7 +35,7 @@ func Forgot(c *fiber.Ctx) error {
 	// }
 
 	// Recherche de l'employé dans la base de données
-	user := &models.Agent{}
+	user := &models.User{}
 	result := database.DB.Where("email = ?", req.Email).First(user)
 
 	// Si l'employé n'existe pas, on retourne toujours le même message pour éviter l'énumération d'emails
@@ -179,7 +179,7 @@ func ResetPassword(c *fiber.Ctx) error {
 	}
 
 	// Recherche de l'employé
-	user := &models.Agent{}
+	user := &models.User{}
 	result = database.DB.Where("email = ?", passwordReset.Email).First(user)
 	if result.Error != nil {
 		return c.Status(400).JSON(fiber.Map{

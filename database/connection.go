@@ -38,6 +38,7 @@ func Connect() {
 		// Producers & Champs
 		&models.Producer{},
 		&models.Champs{},
+		&models.Score{},
 	)
 
 	if err != nil {
@@ -47,5 +48,5 @@ func Connect() {
 	}
 
 	// Seed default data
-	// SeedSuperAdmin()
+	SeedSuperAdmin()
 }

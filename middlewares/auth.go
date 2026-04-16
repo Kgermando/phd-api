@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/kgermando/dentic-support-api/utils"
+	"github.com/kgermando/phd-api/utils"
 )
 
 func IsAuthenticated(c *fiber.Ctx) error {
