@@ -16,7 +16,6 @@ import (
 )
 
 // ============ Scoring Functions ============
-
 type ScoreResult struct {
 	Total                float64 `json:"total"`
 	Environmental        float64 `json:"environmental"`
