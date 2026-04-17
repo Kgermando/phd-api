@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"math"
+	"os"
 	"sort"
 	"strconv"
 	"time"
@@ -1119,13 +1120,16 @@ func ExportDashboardPDF(c *fiber.Ctx) error {
 	}
 
 	pdf := gofpdf.New("P", "mm", "A4", "")
+	tr := pdf.UnicodeTranslatorFromDescriptor("")
 	pdf.AddPage()
-	// Add logo in top-left corner
-	pdf.Image("assets/logo-phd.png", 10, 10, 30, 0, false, "", 0, "")
+	// Add logo in top-left corner (only if file exists)
+	if _, err := os.Stat("assets/logo-phd.png"); err == nil {
+		pdf.Image("assets/logo-phd.png", 10, 10, 30, 0, false, "", 0, "")
+	}
 	pdf.SetFont("Arial", "B", 16)
-	pdf.CellFormat(0, 10, "Tableau de Bord - Rapport des Producteurs", "", 1, "C", false, 0, "")
+	pdf.CellFormat(0, 10, tr("Tableau de Bord - Rapport des Producteurs"), "", 1, "C", false, 0, "")
 	pdf.SetFont("Arial", "", 10)
-	pdf.CellFormat(0, 5, fmt.Sprintf("Généré le: %s", time.Now().Format("02/01/2006 15:04")), "", 1, "C", false, 0, "")
+	pdf.CellFormat(0, 5, fmt.Sprintf(tr("Généré le: %s"), time.Now().Format("02/01/2006 15:04")), "", 1, "C", false, 0, "")
 	pdf.Ln(5)
 
 	// Calculate statistics
@@ -1157,13 +1161,13 @@ func ExportDashboardPDF(c *fiber.Ctx) error {
 
 	// KPIs Section
 	pdf.SetFont("Arial", "B", 12)
-	pdf.CellFormat(0, 8, "Indicateurs Clés de Performance", "", 1, "L", false, 0, "")
+	pdf.CellFormat(0, 8, tr("Indicateurs Clés de Performance"), "", 1, "L", false, 0, "")
 	pdf.SetFont("Arial", "", 10)
 
 	kpiData := [][]string{
-		{"Total Producteurs", fmt.Sprintf("%d", len(scored))},
-		{"Producteurs Éligibles", fmt.Sprintf("%d (%.1f%%)", eligible, float64(eligible)*100/float64(len(scored)))},
-		{"Score Moyen", fmt.Sprintf("%.2f/100", avgScore)},
+		{tr("Total Producteurs"), fmt.Sprintf("%d", len(scored))},
+		{tr("Producteurs Éligibles"), fmt.Sprintf("%d (%.1f%%)", eligible, float64(eligible)*100/float64(len(scored)))},
+		{tr("Score Moyen"), fmt.Sprintf("%.2f/100", avgScore)},
 	}
 
 	for _, row := range kpiData {
@@ -1195,14 +1199,14 @@ func ExportDashboardPDF(c *fiber.Ctx) error {
 	}
 
 	pdf.SetFont("Arial", "B", 12)
-	pdf.CellFormat(0, 8, "Statistiques par Secteur Géographique", "", 1, "L", false, 0, "")
+	pdf.CellFormat(0, 8, tr("Statistiques par Secteur Géographique"), "", 1, "L", false, 0, "")
 	pdf.SetFont("Arial", "", 9)
 
 	pdf.SetFillColor(200, 200, 200)
-	pdf.CellFormat(60, 6, "Secteur", "1", 0, "L", true, 0, "")
+	pdf.CellFormat(60, 6, tr("Secteur"), "1", 0, "L", true, 0, "")
 	pdf.CellFormat(35, 6, "Total", "1", 0, "C", true, 0, "")
-	pdf.CellFormat(35, 6, "Éligibles", "1", 0, "C", true, 0, "")
-	pdf.CellFormat(40, 6, "Score Moyen", "1", 1, "C", true, 0, "")
+	pdf.CellFormat(35, 6, tr("Éligibles"), "1", 0, "C", true, 0, "")
+	pdf.CellFormat(40, 6, tr("Score Moyen"), "1", 1, "C", true, 0, "")
 
 	pdf.SetFillColor(255, 255, 255)
 	for zone, stats := range zoneMap {
@@ -1210,7 +1214,7 @@ func ExportDashboardPDF(c *fiber.Ctx) error {
 		if stats.Count > 0 {
 			avgZoneScore = stats.ScoreSum / float64(stats.Count)
 		}
-		pdf.CellFormat(60, 6, zone, "1", 0, "L", false, 0, "")
+		pdf.CellFormat(60, 6, tr(zone), "1", 0, "L", false, 0, "")
 		pdf.CellFormat(35, 6, fmt.Sprintf("%d", stats.Count), "1", 0, "C", false, 0, "")
 		pdf.CellFormat(35, 6, fmt.Sprintf("%d", stats.Eligible), "1", 0, "C", false, 0, "")
 		pdf.CellFormat(40, 6, fmt.Sprintf("%.2f", avgZoneScore), "1", 1, "C", false, 0, "")
@@ -1221,7 +1225,7 @@ func ExportDashboardPDF(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
-			"message": "Failed to generate PDF",
+			"message": fmt.Sprintf("Failed to generate PDF: %v", err),
 		})
 	}
 
@@ -1267,21 +1271,24 @@ func ExportUserPerformancePDF(c *fiber.Ctx) error {
 	db.Find(&users)
 
 	pdf := gofpdf.New("P", "mm", "A4", "")
+	tr := pdf.UnicodeTranslatorFromDescriptor("")
 	pdf.AddPage()
-	// Add logo in top-left corner
-	pdf.Image("assets/logo-phd.png", 10, 10, 30, 0, false, "", 0, "")
+	// Add logo in top-left corner (only if file exists)
+	if _, err := os.Stat("assets/logo-phd.png"); err == nil {
+		pdf.Image("assets/logo-phd.png", 10, 10, 30, 0, false, "", 0, "")
+	}
 	pdf.SetFont("Arial", "B", 16)
-	pdf.CellFormat(0, 10, "Performance des Agents de Recensement", "", 1, "C", false, 0, "")
+	pdf.CellFormat(0, 10, tr("Performance des Agents de Recensement"), "", 1, "C", false, 0, "")
 	pdf.SetFont("Arial", "", 10)
-	pdf.CellFormat(0, 5, fmt.Sprintf("Généré le: %s", time.Now().Format("02/01/2006 15:04")), "", 1, "C", false, 0, "")
+	pdf.CellFormat(0, 5, fmt.Sprintf(tr("Généré le: %s"), time.Now().Format("02/01/2006 15:04")), "", 1, "C", false, 0, "")
 	pdf.Ln(5)
 
 	pdf.SetFont("Arial", "B", 10)
 	pdf.SetFillColor(200, 200, 200)
 	pdf.CellFormat(50, 6, "Agent", "1", 0, "L", true, 0, "")
 	pdf.CellFormat(30, 6, "Total", "1", 0, "C", true, 0, "")
-	pdf.CellFormat(30, 6, "Éligibles", "1", 0, "C", true, 0, "")
-	pdf.CellFormat(35, 6, "Score Moyen", "1", 0, "C", true, 0, "")
+	pdf.CellFormat(30, 6, tr("Éligibles"), "1", 0, "C", true, 0, "")
+	pdf.CellFormat(35, 6, tr("Score Moyen"), "1", 0, "C", true, 0, "")
 	pdf.CellFormat(25, 6, "Taux", "1", 1, "C", true, 0, "")
 
 	pdf.SetFont("Arial", "", 9)
@@ -1296,7 +1303,7 @@ func ExportUserPerformancePDF(c *fiber.Ctx) error {
 				completionRate = (float64(stats.EligibleProducers) / float64(stats.TotalProducers)) * 100
 			}
 
-			pdf.CellFormat(50, 6, u.Fullname, "1", 0, "L", false, 0, "")
+			pdf.CellFormat(50, 6, tr(u.Fullname), "1", 0, "L", false, 0, "")
 			pdf.CellFormat(30, 6, fmt.Sprintf("%d", stats.TotalProducers), "1", 0, "C", false, 0, "")
 			pdf.CellFormat(30, 6, fmt.Sprintf("%d", stats.EligibleProducers), "1", 0, "C", false, 0, "")
 			pdf.CellFormat(35, 6, fmt.Sprintf("%.2f", avgScore), "1", 0, "C", false, 0, "")
@@ -1309,7 +1316,7 @@ func ExportUserPerformancePDF(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
-			"message": "Failed to generate PDF",
+			"message": fmt.Sprintf("Failed to generate PDF: %v", err),
 		})
 	}
 
