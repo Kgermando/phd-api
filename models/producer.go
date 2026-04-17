@@ -28,7 +28,7 @@ type Producer struct {
 	DeletedAt gorm.DeletedAt `gorm:"index"`
 
 	UserUUID string `gorm:"type:varchar(255);not null" json:"user_uuid"`
-	User	 User   `gorm:"foreignKey:UserUUID;constraint:OnDelete:CASCADE" json:"user"`
+	User     User   `gorm:"foreignKey:UserUUID;constraint:OnDelete:CASCADE" json:"user"`
 
 	// Section 1 - Informations personnelles
 	Nom           string    `gorm:"not null" json:"nom"`
@@ -85,6 +85,7 @@ type Producer struct {
 	// Section 9 - Géolocalisation
 	Latitude  *float64 `json:"latitude"`
 	Longitude *float64 `json:"longitude"`
+	Zone      string   `json:"zone"`
 
 	Scores []Score `gorm:"foreignKey:ProducerUUID;constraint:OnDelete:CASCADE" json:"scores"`
 }

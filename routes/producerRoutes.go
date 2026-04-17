@@ -14,6 +14,7 @@ func SetupProducerRoutes(api fiber.Router) {
 
 	// Producers CRUD
 	prod.Post("/create", producers.CreateProducer)
+	prod.Get("/stats", producers.GetProducerStats)
 	prod.Get("/all/paginate", producers.GetPaginatedProducers)
 	prod.Get("/get/:uuid", producers.GetProducerByID)
 	prod.Put("/update/:uuid", producers.UpdateProducer)

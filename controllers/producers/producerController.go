@@ -4,10 +4,19 @@ import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kgermando/phd-api/controllers/dashboard"
 	"github.com/kgermando/phd-api/database"
 	"github.com/kgermando/phd-api/models"
 	"github.com/kgermando/phd-api/utils"
 )
+
+// MiniStats structure for producer quick stats
+type MiniStats struct {
+	Total       int `json:"total"`
+	Eligible    int `json:"eligible"`
+	NonEligible int `json:"non_eligible"`
+	Femmes      int `json:"femmes"`
+}
 
 // CreateProducer crée un nouveau producteur avec ses champs
 func CreateProducer(c *fiber.Ctx) error {
@@ -21,11 +30,11 @@ func CreateProducer(c *fiber.Ctx) error {
 		})
 	}
 
-	// Validation
-	errors := utils.ValidateStruct(producer)
-	if errors != nil {
-		return c.Status(400).JSON(errors)
-	}
+	// // Validation
+	// errors := utils.ValidateStruct(producer)
+	// if errors != nil {
+	// 	return c.Status(400).JSON(errors)
+	// }
 
 	// Générer UUID
 	producer.UUID = utils.GenerateUUID()
@@ -47,9 +56,85 @@ func CreateProducer(c *fiber.Ctx) error {
 	})
 }
 
+// GetProducerStats retourne les statistiques rapides des producteurs
+func GetProducerStats(c *fiber.Ctx) error {
+	db := database.DB
+
+	// Get current user UUID from context
+	currentUserUUID := c.Locals("user_uuid").(string)
+
+	// Get current user to check role
+	var currentUser models.User
+	if err := db.First(&currentUser, "uuid = ?", currentUserUUID).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Failed to fetch current user",
+		})
+	}
+
+	var producers []models.Producer
+	query := db.Preload("Champs").Preload("Scores")
+
+	// If current user is a Producteur, only show their producers
+	if currentUser.Role == "Producteur" {
+		query = query.Where("user_uuid = ?", currentUserUUID)
+	}
+
+	if err := query.Find(&producers).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Failed to fetch producers",
+		})
+	}
+
+	// Calculate stats
+	stats := MiniStats{
+		Total:       0,
+		Eligible:    0,
+		NonEligible: 0,
+		Femmes:      0,
+	}
+
+	stats.Total = len(producers)
+
+	for _, producer := range producers {
+		// Count women
+		if producer.Sexe == "femme" {
+			stats.Femmes++
+		}
+
+		// Calculate score using dashboard scoring function
+		scoreResult := dashboard.ScoreProducer(producer)
+
+		// Count eligible/non-eligible
+		if scoreResult.Total >= 60 {
+			stats.Eligible++
+		} else {
+			stats.NonEligible++
+		}
+	}
+
+	return c.Status(200).JSON(fiber.Map{
+		"status": "success",
+		"stats":  stats,
+	})
+}
+
 // GetPaginatedProducers récupère les producteurs avec pagination
 func GetPaginatedProducers(c *fiber.Ctx) error {
 	db := database.DB
+
+	// Get current user UUID from context
+	currentUserUUID := c.Locals("user_uuid").(string)
+
+	// Get current user to check role
+	var currentUser models.User
+	if err := db.First(&currentUser, "uuid = ?", currentUserUUID).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Failed to fetch current user",
+		})
+	}
 
 	// Parse query parameters for pagination
 	page, err := strconv.Atoi(c.Query("page", "1"))
@@ -66,11 +151,20 @@ func GetPaginatedProducers(c *fiber.Ctx) error {
 	search := c.Query("search", "")
 	village := c.Query("village", "")
 	userUUID := c.Query("user_uuid", "")
+	zone := c.Query("zone", "")
 
 	var producers []models.Producer
 	var totalRecords int64
 
 	query := db.Model(&models.Producer{})
+
+	// If current user is a Producteur, only show their producers
+	if currentUser.Role == "Producteur" {
+		query = query.Where("user_uuid = ?", currentUserUUID)
+	} else if userUUID != "" {
+		// Only allow filtering by user_uuid if not a Producteur
+		query = query.Where("user_uuid = ?", userUUID)
+	}
 
 	// Add filters
 	if search != "" {
@@ -79,22 +173,31 @@ func GetPaginatedProducers(c *fiber.Ctx) error {
 	if village != "" {
 		query = query.Where("village = ?", village)
 	}
-	if userUUID != "" {
-		query = query.Where("user_uuid = ?", userUUID)
+	if zone != "" {
+		query = query.Where("zone = ?", zone)
 	}
 
 	// Count total records
 	query.Count(&totalRecords)
 
 	query = db.Model(&models.Producer{})
+
+	// If current user is a Producteur, only show their producers
+	if currentUser.Role == "Producteur" {
+		query = query.Where("user_uuid = ?", currentUserUUID)
+	} else if userUUID != "" {
+		// Only allow filtering by user_uuid if not a Producteur
+		query = query.Where("user_uuid = ?", userUUID)
+	}
+
 	if search != "" {
 		query = query.Where("nom ILIKE ? OR telephone ILIKE ? OR village ILIKE ?", "%"+search+"%", "%"+search+"%", "%"+search+"%")
 	}
 	if village != "" {
 		query = query.Where("village = ?", village)
 	}
-	if userUUID != "" {
-		query = query.Where("user_uuid = ?", userUUID)
+	if zone != "" {
+		query = query.Where("zone = ?", zone)
 	}
 
 	err = query.Preload("User").Preload("Champs").
@@ -218,6 +321,7 @@ func UpdateProducer(c *fiber.Ctx) error {
 	// Section 9
 	producer.Latitude = input.Latitude
 	producer.Longitude = input.Longitude
+	producer.Zone = input.Zone
 
 	if err := db.Save(&producer).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{
@@ -295,11 +399,11 @@ func AddChampToProducer(c *fiber.Ctx) error {
 		})
 	}
 
-	// Validation
-	errors := utils.ValidateStruct(champ)
-	if errors != nil {
-		return c.Status(400).JSON(errors)
-	}
+	// // Validation
+	// errors := utils.ValidateStruct(champ)
+	// if errors != nil {
+	// 	return c.Status(400).JSON(errors)
+	// }
 
 	champ.UUID = utils.GenerateUUID()
 	champ.ProducerUUID = producerUUID

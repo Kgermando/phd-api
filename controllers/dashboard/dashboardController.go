@@ -194,6 +194,7 @@ type DashboardStats struct {
 	SourceEauPie     []PieSlice        `json:"source_eau_pie"`
 	TypeRizPie       []PieSlice        `json:"type_riz_pie"`
 	CooperativePie   []PieSlice        `json:"cooperative_pie"`
+	ZonePie          []PieSlice        `json:"zone_pie"`
 	TrancheAgeStats  []BarStat         `json:"tranche_age_stats"`
 	LineData         []LineData        `json:"line_data"`
 }
@@ -460,6 +461,17 @@ func GetDashboardStats(c *fiber.Ctx) error {
 	coopMap["non-member"] = total - coopCount
 	cooperativePie := buildPieSlices(coopMap, coopLabels, coopColors)
 
+	// Zone pie chart
+	zoneMap2 := make(map[string]int)
+	zoneLabels := make(map[string]string)
+	zoneColors := []string{"#e53935", "#1565c0", "#42a5f5", "#29b6f6", "#90caf9", "#2e7d32", "#558b2f", "#aed581", "#f57c00", "#fb8c00", "#fbc02d", "#7e57c2"}
+
+	for _, zone := range zones {
+		zoneMap2[zone.Zone] = zone.Count
+		zoneLabels[zone.Zone] = zone.Zone
+	}
+	zonePie := buildPieSlices(zoneMap2, zoneLabels, zoneColors)
+
 	// Tranche d'âge bar chart
 	refYear := time.Now().Year()
 	ageRanges := make(map[string]int)
@@ -547,6 +559,7 @@ func GetDashboardStats(c *fiber.Ctx) error {
 		SourceEauPie:     sourceEauPie,
 		TypeRizPie:       typeRizPie,
 		CooperativePie:   cooperativePie,
+		ZonePie:          zonePie,
 		TrancheAgeStats:  trancheAgeStats,
 		LineData:         lineData,
 	}

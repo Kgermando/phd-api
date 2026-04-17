@@ -37,6 +37,13 @@ func SetupDashboardRoutes(api fiber.Router) {
 	dash.Get("/producer-scores", dashboard.GetProducerScores)
 
 	// ============================================================
+	// MAP ROUTES
+	// ============================================================
+	dash.Get("/map", dashboard.GetMapData)
+	dash.Get("/map/zone", dashboard.GetMapDataByZone)
+	dash.Get("/map/score", dashboard.GetMapDataByScore)
+
+	// ============================================================
 	// PDF EXPORT ROUTES
 	// ============================================================
 	dash.Get("/export/pdf", dashboard.ExportDashboardPDF)
