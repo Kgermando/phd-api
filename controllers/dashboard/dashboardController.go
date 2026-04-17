@@ -1121,16 +1121,19 @@ func ExportDashboardPDF(c *fiber.Ctx) error {
 
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	tr := pdf.UnicodeTranslatorFromDescriptor("")
+	pdf.SetMargins(15, 15, 15)
+	pdf.SetAutoPageBreak(true, 20)
 	pdf.AddPage()
 	// Add logo in top-left corner (only if file exists)
 	if _, err := os.Stat("assets/logo-phd.png"); err == nil {
-		pdf.Image("assets/logo-phd.png", 10, 10, 30, 0, false, "", 0, "")
+		pdf.Image("assets/logo-phd.png", 15, 10, 30, 0, false, "", 0, "")
 	}
+	pdf.SetY(45)
 	pdf.SetFont("Arial", "B", 16)
 	pdf.CellFormat(0, 10, tr("Tableau de Bord - Rapport des Producteurs"), "", 1, "C", false, 0, "")
 	pdf.SetFont("Arial", "", 10)
 	pdf.CellFormat(0, 5, fmt.Sprintf(tr("Généré le: %s"), time.Now().Format("02/01/2006 15:04")), "", 1, "C", false, 0, "")
-	pdf.Ln(5)
+	pdf.Ln(8)
 
 	// Calculate statistics
 	type ScoredProducer struct {
@@ -1164,9 +1167,13 @@ func ExportDashboardPDF(c *fiber.Ctx) error {
 	pdf.CellFormat(0, 8, tr("Indicateurs Clés de Performance"), "", 1, "L", false, 0, "")
 	pdf.SetFont("Arial", "", 10)
 
+	eligiblePct := 0.0
+	if len(scored) > 0 {
+		eligiblePct = float64(eligible) * 100 / float64(len(scored))
+	}
 	kpiData := [][]string{
 		{tr("Total Producteurs"), fmt.Sprintf("%d", len(scored))},
-		{tr("Producteurs Éligibles"), fmt.Sprintf("%d (%.1f%%)", eligible, float64(eligible)*100/float64(len(scored)))},
+		{tr("Producteurs Éligibles"), fmt.Sprintf("%d (%.1f%%)", eligible, eligiblePct)},
 		{tr("Score Moyen"), fmt.Sprintf("%.2f/100", avgScore)},
 	}
 
@@ -1203,21 +1210,27 @@ func ExportDashboardPDF(c *fiber.Ctx) error {
 	pdf.SetFont("Arial", "", 9)
 
 	pdf.SetFillColor(200, 200, 200)
-	pdf.CellFormat(60, 6, tr("Secteur"), "1", 0, "L", true, 0, "")
-	pdf.CellFormat(35, 6, "Total", "1", 0, "C", true, 0, "")
-	pdf.CellFormat(35, 6, tr("Éligibles"), "1", 0, "C", true, 0, "")
-	pdf.CellFormat(40, 6, tr("Score Moyen"), "1", 1, "C", true, 0, "")
+	pdf.CellFormat(60, 7, tr("Secteur"), "1", 0, "L", true, 0, "")
+	pdf.CellFormat(35, 7, "Total", "1", 0, "C", true, 0, "")
+	pdf.CellFormat(35, 7, tr("Éligibles"), "1", 0, "C", true, 0, "")
+	pdf.CellFormat(40, 7, tr("Score Moyen"), "1", 1, "C", true, 0, "")
 
-	pdf.SetFillColor(255, 255, 255)
+	rowFill := false
 	for zone, stats := range zoneMap {
 		avgZoneScore := 0.0
 		if stats.Count > 0 {
 			avgZoneScore = stats.ScoreSum / float64(stats.Count)
 		}
-		pdf.CellFormat(60, 6, tr(zone), "1", 0, "L", false, 0, "")
-		pdf.CellFormat(35, 6, fmt.Sprintf("%d", stats.Count), "1", 0, "C", false, 0, "")
-		pdf.CellFormat(35, 6, fmt.Sprintf("%d", stats.Eligible), "1", 0, "C", false, 0, "")
-		pdf.CellFormat(40, 6, fmt.Sprintf("%.2f", avgZoneScore), "1", 1, "C", false, 0, "")
+		if rowFill {
+			pdf.SetFillColor(235, 245, 255)
+		} else {
+			pdf.SetFillColor(255, 255, 255)
+		}
+		pdf.CellFormat(60, 7, tr(zone), "1", 0, "L", true, 0, "")
+		pdf.CellFormat(35, 7, fmt.Sprintf("%d", stats.Count), "1", 0, "C", true, 0, "")
+		pdf.CellFormat(35, 7, fmt.Sprintf("%d", stats.Eligible), "1", 0, "C", true, 0, "")
+		pdf.CellFormat(40, 7, fmt.Sprintf("%.2f", avgZoneScore), "1", 1, "C", true, 0, "")
+		rowFill = !rowFill
 	}
 
 	var buf bytes.Buffer
@@ -1272,28 +1285,30 @@ func ExportUserPerformancePDF(c *fiber.Ctx) error {
 
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	tr := pdf.UnicodeTranslatorFromDescriptor("")
+	pdf.SetMargins(15, 15, 15)
+	pdf.SetAutoPageBreak(true, 20)
 	pdf.AddPage()
 	// Add logo in top-left corner (only if file exists)
 	if _, err := os.Stat("assets/logo-phd.png"); err == nil {
-		pdf.Image("assets/logo-phd.png", 10, 10, 30, 0, false, "", 0, "")
+		pdf.Image("assets/logo-phd.png", 15, 10, 30, 0, false, "", 0, "")
 	}
+	pdf.SetY(45)
 	pdf.SetFont("Arial", "B", 16)
 	pdf.CellFormat(0, 10, tr("Performance des Agents de Recensement"), "", 1, "C", false, 0, "")
 	pdf.SetFont("Arial", "", 10)
 	pdf.CellFormat(0, 5, fmt.Sprintf(tr("Généré le: %s"), time.Now().Format("02/01/2006 15:04")), "", 1, "C", false, 0, "")
-	pdf.Ln(5)
+	pdf.Ln(8)
 
 	pdf.SetFont("Arial", "B", 10)
 	pdf.SetFillColor(200, 200, 200)
-	pdf.CellFormat(50, 6, "Agent", "1", 0, "L", true, 0, "")
-	pdf.CellFormat(30, 6, "Total", "1", 0, "C", true, 0, "")
-	pdf.CellFormat(30, 6, tr("Éligibles"), "1", 0, "C", true, 0, "")
-	pdf.CellFormat(35, 6, tr("Score Moyen"), "1", 0, "C", true, 0, "")
-	pdf.CellFormat(25, 6, "Taux", "1", 1, "C", true, 0, "")
+	pdf.CellFormat(50, 7, "Agent", "1", 0, "L", true, 0, "")
+	pdf.CellFormat(32, 7, "Total", "1", 0, "C", true, 0, "")
+	pdf.CellFormat(30, 7, tr("Éligibles"), "1", 0, "C", true, 0, "")
+	pdf.CellFormat(35, 7, tr("Score Moyen"), "1", 0, "C", true, 0, "")
+	pdf.CellFormat(33, 7, "Taux (%)", "1", 1, "C", true, 0, "")
 
 	pdf.SetFont("Arial", "", 9)
-	pdf.SetFillColor(255, 255, 255)
-
+	agentFill := false
 	for _, u := range users {
 		if stats, exists := userMap[u.UUID]; exists {
 			avgScore := 0.0
@@ -1302,12 +1317,17 @@ func ExportUserPerformancePDF(c *fiber.Ctx) error {
 				avgScore = stats.TotalScore / float64(stats.TotalProducers)
 				completionRate = (float64(stats.EligibleProducers) / float64(stats.TotalProducers)) * 100
 			}
-
-			pdf.CellFormat(50, 6, tr(u.Fullname), "1", 0, "L", false, 0, "")
-			pdf.CellFormat(30, 6, fmt.Sprintf("%d", stats.TotalProducers), "1", 0, "C", false, 0, "")
-			pdf.CellFormat(30, 6, fmt.Sprintf("%d", stats.EligibleProducers), "1", 0, "C", false, 0, "")
-			pdf.CellFormat(35, 6, fmt.Sprintf("%.2f", avgScore), "1", 0, "C", false, 0, "")
-			pdf.CellFormat(25, 6, fmt.Sprintf("%.1f%%", completionRate), "1", 1, "C", false, 0, "")
+			if agentFill {
+				pdf.SetFillColor(235, 245, 255)
+			} else {
+				pdf.SetFillColor(255, 255, 255)
+			}
+			pdf.CellFormat(50, 7, tr(u.Fullname), "1", 0, "L", true, 0, "")
+			pdf.CellFormat(32, 7, fmt.Sprintf("%d", stats.TotalProducers), "1", 0, "C", true, 0, "")
+			pdf.CellFormat(30, 7, fmt.Sprintf("%d", stats.EligibleProducers), "1", 0, "C", true, 0, "")
+			pdf.CellFormat(35, 7, fmt.Sprintf("%.2f", avgScore), "1", 0, "C", true, 0, "")
+			pdf.CellFormat(33, 7, fmt.Sprintf("%.1f%%", completionRate), "1", 1, "C", true, 0, "")
+			agentFill = !agentFill
 		}
 	}
 
@@ -1475,7 +1495,7 @@ func ExportDashboardExcel(c *fiber.Ctx) error {
 		row++
 	}
 
-	f.DeleteSheet("Sheet")
+	f.DeleteSheet("Sheet1")
 
 	var buf bytes.Buffer
 	if err := f.Write(&buf); err != nil {
@@ -1552,7 +1572,7 @@ func ExportProducerScoresExcel(c *fiber.Ctx) error {
 		row++
 	}
 
-	f.DeleteSheet("Sheet")
+	f.DeleteSheet("Sheet1")
 
 	var buf bytes.Buffer
 	if err := f.Write(&buf); err != nil {
@@ -1642,7 +1662,7 @@ func ExportUserPerformanceExcel(c *fiber.Ctx) error {
 		}
 	}
 
-	f.DeleteSheet("Sheet")
+	f.DeleteSheet("Sheet1")
 
 	var buf bytes.Buffer
 	if err := f.Write(&buf); err != nil {
