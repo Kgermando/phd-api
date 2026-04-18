@@ -35,8 +35,11 @@ type Producer struct {
 	Sexe          string    `gorm:"not null" json:"sexe"` // homme, femme
 	DateNaissance time.Time `gorm:"not null" json:"date_naissance"`
 	Telephone     string    `gorm:"not null" json:"telephone"`
-	Village       string    `gorm:"not null" json:"village"`
-	Groupement    string    `json:"groupement"`
+
+	Province   string `gorm:"not null;default:' '" json:"province"`
+	Territoire string `gorm:"not null;default:' '" json:"territoire"`
+	Village    string `gorm:"not null" json:"village"`
+	Groupement string `json:"groupement"`
 
 	// Section 2 - Statut foncier & expérience
 	StatutFoncier     string `gorm:"not null" json:"statut_foncier"` // proprietaire, exploitant, metayer, autre

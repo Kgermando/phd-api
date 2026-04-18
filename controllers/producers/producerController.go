@@ -149,6 +149,8 @@ func GetPaginatedProducers(c *fiber.Ctx) error {
 
 	// Parse search query
 	search := c.Query("search", "")
+	province := c.Query("province", "")
+	territoire := c.Query("territoire", "")
 	village := c.Query("village", "")
 	userUUID := c.Query("user_uuid", "")
 	zone := c.Query("zone", "")
@@ -169,6 +171,12 @@ func GetPaginatedProducers(c *fiber.Ctx) error {
 	// Add filters
 	if search != "" {
 		query = query.Where("nom ILIKE ? OR telephone ILIKE ? OR village ILIKE ?", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+	}
+	if province != "" {
+		query = query.Where("province = ?", province)
+	}
+	if territoire != "" {
+		query = query.Where("territoire = ?", territoire)
 	}
 	if village != "" {
 		query = query.Where("village = ?", village)
@@ -192,6 +200,12 @@ func GetPaginatedProducers(c *fiber.Ctx) error {
 
 	if search != "" {
 		query = query.Where("nom ILIKE ? OR telephone ILIKE ? OR village ILIKE ?", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+	}
+	if province != "" {
+		query = query.Where("province = ?", province)
+	}
+	if territoire != "" {
+		query = query.Where("territoire = ?", territoire)
 	}
 	if village != "" {
 		query = query.Where("village = ?", village)
@@ -281,6 +295,8 @@ func UpdateProducer(c *fiber.Ctx) error {
 	producer.Sexe = input.Sexe
 	producer.DateNaissance = input.DateNaissance
 	producer.Telephone = input.Telephone
+	producer.Province = input.Province
+	producer.Territoire = input.Territoire
 	producer.Village = input.Village
 	producer.Groupement = input.Groupement
 	// Section 2
