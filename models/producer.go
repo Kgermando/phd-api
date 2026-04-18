@@ -36,8 +36,8 @@ type Producer struct {
 	DateNaissance time.Time `gorm:"not null" json:"date_naissance"`
 	Telephone     string    `gorm:"not null" json:"telephone"`
 
-	Province   string `gorm:"not null;default:' '" json:"province"`
-	Territoire string `gorm:"not null;default:' '" json:"territoire"`
+	Province   string `json:"province"`
+	Territoire string `json:"territoire"`
 	Village    string `gorm:"not null" json:"village"`
 	Groupement string `json:"groupement"`
 
