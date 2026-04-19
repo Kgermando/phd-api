@@ -7,7 +7,6 @@ import (
 	"github.com/kgermando/phd-api/controllers/dashboard"
 	"github.com/kgermando/phd-api/database"
 	"github.com/kgermando/phd-api/models"
-	"github.com/kgermando/phd-api/utils"
 )
 
 // MiniStats structure for producer quick stats
@@ -41,9 +40,6 @@ func CreateProducer(c *fiber.Ctx) error {
 	// if errors != nil {
 	// 	return c.Status(400).JSON(errors)
 	// }
-
-	// Générer UUID
-	producer.UUID = utils.GenerateUUID()
 
 	// Assigner user_uuid depuis le token JWT
 	producer.UserUUID = c.Locals("user_uuid").(string)
@@ -436,7 +432,6 @@ func AddChampToProducer(c *fiber.Ctx) error {
 	// 	return c.Status(400).JSON(errors)
 	// }
 
-	champ.UUID = utils.GenerateUUID()
 	champ.ProducerUUID = producerUUID
 	if err := db.Create(&champ).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{

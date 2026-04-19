@@ -4,7 +4,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/kgermando/phd-api/database"
 	"github.com/kgermando/phd-api/models"
-	"github.com/kgermando/phd-api/utils"
 )
 
 // CreateScore crée un score pour un producteur et calcule automatiquement le total
@@ -36,7 +35,6 @@ func CreateScore(c *fiber.Ctx) error {
 		})
 	}
 
-	score.UUID = utils.GenerateUUID()
 	score.ProducerUUID = producerUUID
 
 	// Calculer le score total et le statut de recommandation
