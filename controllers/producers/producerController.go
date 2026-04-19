@@ -18,6 +18,12 @@ type MiniStats struct {
 	Femmes      int `json:"femmes"`
 }
 
+// ProducerWithScore wraps a producer with its computed total score
+type ProducerWithScore struct {
+	models.Producer
+	TotalScore float64 `json:"total_score"`
+}
+
 // CreateProducer crée un nouveau producteur avec ses champs
 func CreateProducer(c *fiber.Ctx) error {
 	db := database.DB
@@ -214,7 +220,7 @@ func GetPaginatedProducers(c *fiber.Ctx) error {
 		query = query.Where("zone = ?", zone)
 	}
 
-	err = query.Preload("User").Preload("Champs").
+	err = query.Preload("User").Preload("Champs").Preload("Scores").
 		Offset(offset).
 		Limit(limit).
 		Order("producers.updated_at DESC").
@@ -227,12 +233,21 @@ func GetPaginatedProducers(c *fiber.Ctx) error {
 		})
 	}
 
+	producersWithScore := make([]ProducerWithScore, len(producers))
+	for i, p := range producers {
+		scoreResult := dashboard.ScoreProducer(p)
+		producersWithScore[i] = ProducerWithScore{
+			Producer:   p,
+			TotalScore: scoreResult.Total,
+		}
+	}
+
 	return c.Status(200).JSON(fiber.Map{
 		"status":    "success",
 		"total":     totalRecords,
 		"page":      page,
 		"limit":     limit,
-		"producers": producers,
+		"producers": producersWithScore,
 	})
 }
 
