@@ -20,7 +20,7 @@ func SeedSuperAdmin() {
 	superAdmin := models.User{
 		UUID:       utils.GenerateUUID(),
 		Fullname:   "Support IT",
-		Email:      "suport@phd.app",
+		Email:      "suport@phdc.app",
 		Telephone:  "+000000000000",
 		Role:       "Admin",
 		Permission: "all",

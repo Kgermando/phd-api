@@ -250,6 +250,79 @@ func GetPaginatedProducers(c *fiber.Ctx) error {
 	})
 }
 
+// GetPaginatedProducersByUserUUID récupère les producteurs d'un utilisateur avec pagination
+func GetPaginatedProducersByUserUUID(c *fiber.Ctx) error {
+	db := database.DB
+
+	userUUID := c.Params("userUUID")
+	if userUUID == "" {
+		return c.Status(400).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid user UUID",
+		})
+	}
+
+	page, err := strconv.Atoi(c.Query("page", "1"))
+	if err != nil || page <= 0 {
+		page = 1
+	}
+	limit, err := strconv.Atoi(c.Query("limit", "15"))
+	if err != nil || limit <= 0 {
+		limit = 15
+	}
+	offset := (page - 1) * limit
+
+	search := c.Query("search", "")
+
+	var producers []models.Producer
+	var totalRecords int64
+
+	countQuery := db.Model(&models.Producer{}).Where("user_uuid = ?", userUUID)
+	fetchQuery := db.Model(&models.Producer{}).Where("user_uuid = ?", userUUID)
+	if search != "" {
+		searchFilter := "nom ILIKE ? OR telephone ILIKE ? OR village ILIKE ?"
+		args := []interface{}{"%" + search + "%", "%" + search + "%", "%" + search + "%"}
+		countQuery = countQuery.Where(searchFilter, args...)
+		fetchQuery = fetchQuery.Where(searchFilter, args...)
+	}
+
+	countQuery.Count(&totalRecords)
+
+	err = fetchQuery.
+		Preload("User").Preload("Champs").Preload("Scores").
+		Offset(offset).
+		Limit(limit).
+		Order("producers.updated_at DESC").
+		Find(&producers).Error
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Failed to fetch producers",
+		})
+	}
+
+	producersWithScore := make([]ProducerWithScore, len(producers))
+	for i, p := range producers {
+		scoreTotal := 0
+		if len(p.Scores) > 0 {
+			scoreTotal = p.Scores[len(p.Scores)-1].ScoreTotal
+		}
+		producersWithScore[i] = ProducerWithScore{
+			Producer:   p,
+			ScoreTotal: scoreTotal,
+		}
+	}
+
+	return c.Status(200).JSON(fiber.Map{
+		"status":    "success",
+		"total":     totalRecords,
+		"page":      page,
+		"limit":     limit,
+		"producers": producersWithScore,
+	})
+}
+
 // GetProducerByID récupère un producteur par son UUID
 func GetProducerByID(c *fiber.Ctx) error {
 	db := database.DB

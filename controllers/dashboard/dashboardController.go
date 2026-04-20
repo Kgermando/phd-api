@@ -302,7 +302,7 @@ func GetDashboardStats(c *fiber.Ctx) error {
 	db := database.DB
 
 	var producers []models.Producer
-	if err := db.Preload("Champs").Find(&producers).Error; err != nil {
+	if err := db.Preload("Champs").Preload("Scores").Find(&producers).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Failed to fetch producers",
@@ -316,10 +316,13 @@ func GetDashboardStats(c *fiber.Ctx) error {
 
 	var scored []ScoredProducer
 	for _, p := range producers {
-		scoreResult := ScoreProducer(p)
+		score := 0.0
+		if len(p.Scores) > 0 {
+			score = float64(p.Scores[len(p.Scores)-1].ScoreTotal)
+		}
 		scored = append(scored, ScoredProducer{
 			Producer: p,
-			Score:    scoreResult.Total,
+			Score:    score,
 		})
 	}
 
@@ -577,7 +580,7 @@ func GetUserPerformance(c *fiber.Ctx) error {
 	db := database.DB
 
 	var producers []models.Producer
-	if err := db.Find(&producers).Error; err != nil {
+	if err := db.Preload("Scores").Find(&producers).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Failed to fetch producers",
@@ -592,13 +595,16 @@ func GetUserPerformance(c *fiber.Ctx) error {
 	})
 
 	for _, p := range producers {
-		scoreResult := ScoreProducer(p)
+		score := 0.0
+		if len(p.Scores) > 0 {
+			score = float64(p.Scores[len(p.Scores)-1].ScoreTotal)
+		}
 		stats := userMap[p.UserUUID]
 		stats.TotalProducers++
-		if scoreResult.Total >= 60 {
+		if score >= 60 {
 			stats.EligibleProducers++
 		}
-		stats.TotalScore += scoreResult.Total
+		stats.TotalScore += score
 		if stats.LastSurveyDate == nil || p.CreatedAt.After(*stats.LastSurveyDate) {
 			stats.LastSurveyDate = &p.CreatedAt
 		}
@@ -651,7 +657,7 @@ func GetZonePerformance(c *fiber.Ctx) error {
 	db := database.DB
 
 	var producers []models.Producer
-	if err := db.Preload("Champs").Find(&producers).Error; err != nil {
+	if err := db.Preload("Champs").Preload("Scores").Find(&producers).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Failed to fetch producers",
@@ -669,7 +675,10 @@ func GetZonePerformance(c *fiber.Ctx) error {
 	zoneMap := make(map[string]ZoneAgentStats)
 
 	for _, p := range producers {
-		scoreResult := ScoreProducer(p)
+		score := 0.0
+		if len(p.Scores) > 0 {
+			score = float64(p.Scores[len(p.Scores)-1].ScoreTotal)
+		}
 		zone := p.Village
 		if zone == "" {
 			zone = "Inconnue"
@@ -678,10 +687,10 @@ func GetZonePerformance(c *fiber.Ctx) error {
 		stats := zoneMap[zone]
 		stats.Zone = zone
 		stats.TotalProducers++
-		if scoreResult.Total >= 60 {
+		if score >= 60 {
 			stats.EligibleProducers++
 		}
-		stats.TotalScore += scoreResult.Total
+		stats.TotalScore += score
 
 		if stats.AgentCounts == nil {
 			stats.AgentCounts = make(map[string]int)
@@ -1011,7 +1020,7 @@ func GetSurveyTimeSeries(c *fiber.Ctx) error {
 	db := database.DB
 
 	var producers []models.Producer
-	if err := db.Find(&producers).Error; err != nil {
+	if err := db.Preload("Scores").Find(&producers).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Failed to fetch producers",
@@ -1032,11 +1041,14 @@ func GetSurveyTimeSeries(c *fiber.Ctx) error {
 
 	for _, p := range producers {
 		dateStr := p.CreatedAt.Format("2006-01-02")
-		scoreResult := ScoreProducer(p)
+		score := 0.0
+		if len(p.Scores) > 0 {
+			score = float64(p.Scores[len(p.Scores)-1].ScoreTotal)
+		}
 
 		stats := dateMap[dateStr]
 		stats.count++
-		stats.scoreSum += scoreResult.Total
+		stats.scoreSum += score
 		dateMap[dateStr] = stats
 	}
 
@@ -1070,7 +1082,7 @@ func GetProducerScores(c *fiber.Ctx) error {
 	db := database.DB
 
 	var producers []models.Producer
-	if err := db.Preload("Champs").Find(&producers).Error; err != nil {
+	if err := db.Preload("Champs").Preload("Scores").Find(&producers).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Failed to fetch producers",
@@ -1085,10 +1097,14 @@ func GetProducerScores(c *fiber.Ctx) error {
 
 	var result []ProducerWithScore
 	for _, p := range producers {
+		score := 0.0
+		if len(p.Scores) > 0 {
+			score = float64(p.Scores[len(p.Scores)-1].ScoreTotal)
+		}
 		scoreDetail := ScoreProducer(p)
 		result = append(result, ProducerWithScore{
 			Producer:    p,
-			Score:       scoreDetail.Total,
+			Score:       score,
 			ScoreDetail: scoreDetail,
 		})
 	}
@@ -1112,7 +1128,7 @@ func ExportDashboardPDF(c *fiber.Ctx) error {
 	db := database.DB
 
 	var producers []models.Producer
-	if err := db.Preload("Champs").Find(&producers).Error; err != nil {
+	if err := db.Preload("Champs").Preload("Scores").Find(&producers).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Failed to fetch producers",
@@ -1146,13 +1162,16 @@ func ExportDashboardPDF(c *fiber.Ctx) error {
 	eligible := 0
 
 	for _, p := range producers {
-		scoreResult := ScoreProducer(p)
+		score := 0.0
+		if len(p.Scores) > 0 {
+			score = float64(p.Scores[len(p.Scores)-1].ScoreTotal)
+		}
 		scored = append(scored, ScoredProducer{
 			Producer: p,
-			Score:    scoreResult.Total,
+			Score:    score,
 		})
-		totalScore += scoreResult.Total
-		if scoreResult.Total >= 60 {
+		totalScore += score
+		if score >= 60 {
 			eligible++
 		}
 	}
@@ -1252,7 +1271,7 @@ func ExportUserPerformancePDF(c *fiber.Ctx) error {
 	db := database.DB
 
 	var producers []models.Producer
-	if err := db.Find(&producers).Error; err != nil {
+	if err := db.Preload("Scores").Find(&producers).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Failed to fetch producers",
@@ -1267,13 +1286,16 @@ func ExportUserPerformancePDF(c *fiber.Ctx) error {
 	})
 
 	for _, p := range producers {
-		scoreResult := ScoreProducer(p)
+		score := 0.0
+		if len(p.Scores) > 0 {
+			score = float64(p.Scores[len(p.Scores)-1].ScoreTotal)
+		}
 		stats := userMap[p.UserUUID]
 		stats.TotalProducers++
-		if scoreResult.Total >= 60 {
+		if score >= 60 {
 			stats.EligibleProducers++
 		}
-		stats.TotalScore += scoreResult.Total
+		stats.TotalScore += score
 		if stats.LastSurveyDate == nil || p.CreatedAt.After(*stats.LastSurveyDate) {
 			stats.LastSurveyDate = &p.CreatedAt
 		}
@@ -1352,7 +1374,7 @@ func ExportDashboardExcel(c *fiber.Ctx) error {
 	db := database.DB
 
 	var producers []models.Producer
-	if err := db.Preload("Champs").Find(&producers).Error; err != nil {
+	if err := db.Preload("Champs").Preload("Scores").Find(&producers).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Failed to fetch producers",
@@ -1379,13 +1401,16 @@ func ExportDashboardExcel(c *fiber.Ctx) error {
 	femmes := 0
 
 	for _, p := range producers {
-		scoreResult := ScoreProducer(p)
+		score := 0.0
+		if len(p.Scores) > 0 {
+			score = float64(p.Scores[len(p.Scores)-1].ScoreTotal)
+		}
 		scored = append(scored, ScoredProducer{
 			Producer: p,
-			Score:    scoreResult.Total,
+			Score:    score,
 		})
-		totalScore += scoreResult.Total
-		if scoreResult.Total >= 60 {
+		totalScore += score
+		if score >= 60 {
 			eligible++
 		}
 		if p.Sexe == "femme" {
@@ -1515,7 +1540,7 @@ func ExportProducerScoresExcel(c *fiber.Ctx) error {
 	db := database.DB
 
 	var producers []models.Producer
-	if err := db.Preload("Champs").Find(&producers).Error; err != nil {
+	if err := db.Preload("Champs").Preload("Scores").Find(&producers).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Failed to fetch producers",
@@ -1547,11 +1572,14 @@ func ExportProducerScoresExcel(c *fiber.Ctx) error {
 	}
 
 	for _, p := range producers {
-		scoreResult := ScoreProducer(p)
+		score := 0.0
+		if len(p.Scores) > 0 {
+			score = float64(p.Scores[len(p.Scores)-1].ScoreTotal)
+		}
 		scored = append(scored, struct {
 			Producer models.Producer
 			Score    float64
-		}{p, scoreResult.Total})
+		}{p, score})
 	}
 
 	sort.Slice(scored, func(i, j int) bool {
@@ -1592,7 +1620,7 @@ func ExportUserPerformanceExcel(c *fiber.Ctx) error {
 	db := database.DB
 
 	var producers []models.Producer
-	if err := db.Find(&producers).Error; err != nil {
+	if err := db.Preload("Scores").Find(&producers).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Failed to fetch producers",
@@ -1607,13 +1635,16 @@ func ExportUserPerformanceExcel(c *fiber.Ctx) error {
 	})
 
 	for _, p := range producers {
-		scoreResult := ScoreProducer(p)
+		score := 0.0
+		if len(p.Scores) > 0 {
+			score = float64(p.Scores[len(p.Scores)-1].ScoreTotal)
+		}
 		stats := userMap[p.UserUUID]
 		stats.TotalProducers++
-		if scoreResult.Total >= 60 {
+		if score >= 60 {
 			stats.EligibleProducers++
 		}
-		stats.TotalScore += scoreResult.Total
+		stats.TotalScore += score
 		if stats.LastSurveyDate == nil || p.CreatedAt.After(*stats.LastSurveyDate) {
 			stats.LastSurveyDate = &p.CreatedAt
 		}
