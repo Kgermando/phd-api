@@ -35,4 +35,5 @@ func SetupProducerRoutes(api fiber.Router) {
 	prod.Put("/scores/:scoreUUID/update", producers.UpdateScore)
 	prod.Delete("/scores/:scoreUUID/delete", producers.DeleteScore)
 	prod.Get("/scores/recommended/list", producers.GetRecommendedProducers)
+	prod.Get("/:uuid/scores/total", producers.GetTotalScoreByProducer)
 }

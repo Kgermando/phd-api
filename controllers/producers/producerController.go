@@ -20,7 +20,7 @@ type MiniStats struct {
 // ProducerWithScore wraps a producer with its computed total score
 type ProducerWithScore struct {
 	models.Producer
-	TotalScore float64 `json:"total_score"`
+	ScoreTotal int `json:"score_total"`
 }
 
 // CreateProducer crée un nouveau producteur avec ses champs
@@ -231,10 +231,13 @@ func GetPaginatedProducers(c *fiber.Ctx) error {
 
 	producersWithScore := make([]ProducerWithScore, len(producers))
 	for i, p := range producers {
-		scoreResult := dashboard.ScoreProducer(p)
+		scoreTotal := 0
+		if len(p.Scores) > 0 {
+			scoreTotal = p.Scores[len(p.Scores)-1].ScoreTotal
+		}
 		producersWithScore[i] = ProducerWithScore{
 			Producer:   p,
-			TotalScore: scoreResult.Total,
+			ScoreTotal: scoreTotal,
 		}
 	}
 

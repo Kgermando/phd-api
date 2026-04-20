@@ -199,6 +199,38 @@ func DeleteScore(c *fiber.Ctx) error {
 	})
 }
 
+// GetTotalScoreByProducer retourne le score total d'un producteur par son UUID
+func GetTotalScoreByProducer(c *fiber.Ctx) error {
+	db := database.DB
+
+	producerUUID := c.Params("uuid")
+	if producerUUID == "" {
+		return c.Status(400).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid producer UUID",
+		})
+	}
+
+	var result struct {
+		ScoreTotal int `json:"score_total"`
+	}
+	if err := db.Model(&models.Score{}).
+		Select("COALESCE(SUM(score_total), 0) as score_total").
+		Where("producer_uuid = ?", producerUUID).
+		Scan(&result).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Failed to fetch total score",
+		})
+	}
+
+	return c.Status(200).JSON(fiber.Map{
+		"status":        "success",
+		"producer_uuid": producerUUID,
+		"score_total":   result.ScoreTotal,
+	})
+}
+
 // GetRecommendedProducers récupère les producteurs avec un score >= 60
 func GetRecommendedProducers(c *fiber.Ctx) error {
 	db := database.DB
