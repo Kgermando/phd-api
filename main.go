@@ -34,7 +34,7 @@ func main() {
 
 	// Middleware
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "https://phd-h7cv.onrender.com, https://f005.backblazeb2.com/, http://localhost:4200",
+		AllowOrigins:     "https://phd-8vvc.onrender.com, https://f005.backblazeb2.com/, http://localhost:4200",
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, Expires, Cache-Control, Pragma",
 		AllowCredentials: true,
 		AllowMethods: strings.Join([]string{
