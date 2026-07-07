@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -109,14 +108,7 @@ func Login(c *fiber.Ctx) error {
 
 func AuthAgent(c *fiber.Ctx) error {
 
-	token := c.Query("token")
-
-	fmt.Println("token", token)
-
-	// cookie := c.Cookies("token")
-	agentUUID, _ := utils.VerifyJwt(token)
-
-	fmt.Println("agentUUID", agentUUID)
+	agentUUID := c.Locals("user_uuid").(string)
 
 	u := models.User{}
 

@@ -10,12 +10,13 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/kgermando/phd-api/database"
 	"github.com/kgermando/phd-api/routes"
+	"github.com/kgermando/phd-api/utils"
 )
 
 func getPort() string {
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = ":8000"
+		port = ":3000"
 	} else {
 		port = ":" + port
 	}
@@ -25,6 +26,7 @@ func getPort() string {
 
 func main() {
 
+	utils.LoadEnv()
 	database.Connect()
 
 	app := fiber.New()
